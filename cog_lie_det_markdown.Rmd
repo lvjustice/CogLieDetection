@@ -1,0 +1,59 @@
+---
+title: "Cog_Lie_Det_Results"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(readxl)
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(yarrr)
+library(brms)
+library(sjPlot)
+
+```
+
+
+
+```{r data wrangling, echo = FALSE}
+
+Df <- read_excel("Df.xlsx")
+
+Df$ID <- factor(Df$ID)
+Df$load_type <- factor(Df$load_type)
+Df$mem_type <- factor(Df$mem_type)
+Df$cue <- factor(Df$cue)
+Df$soundClip <- factor(Df$soundClip)
+
+
+```
+
+Results
+
+All analyses were run using RStudio Version 3.5.1. 
+
+```{r Retrieval time, echo  = FALSE}
+
+expt2_summary <- Df %>%
+  group_by(load_type) %>%
+  summarise(mean = mean(memRT), sd = sd(memRT))
+
+#pirateplot(log(memRT) ~ load_type + mem_type, data = Df)
+
+
+expt2_RT <- lmerTest::lmer(log(memRT) ~ load_type * mem_type + (1|ID) + (1|cue) , data = Df)
+
+tab_model(expt2_RT)
+
+```
+
+## Memory Retrieval Time
+
+A linear mixed effects model was run to investigate the effect of memory type and cognitive load on memory retreival times. As such, memory type (real, fabriacted) and cogntiive load (present, absent) were included as fixed effects, with participants and cue words included as random intercepts. Retreival time was log transformed to approimate normality. As can be seen in Table 1, results revealed no significant interaction between memory type and cognitive load, no significant effect of memory type, however, results showed a significant difference of cognitive load, such that participants took longer to retrieve a memory in the absence of the secondary task (mean = `r round(expt2_summary$mean[2],3)`, sd = `r round(expt2_summary$sd[2], 3)`) was no present as compared when it was present (mean = `r round(expt2_summary$mean[1],3)`, sd = `r round(expt2_summary$sd[1], 3)`.  
+
+
+
