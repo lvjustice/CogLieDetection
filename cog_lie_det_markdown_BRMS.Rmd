@@ -1,0 +1,158 @@
+---
+title: "Cog_Lie_Det_Results"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(readxl)
+library(tidyverse)
+library(yarrr)
+library(brms)
+library(sjPlot)
+library(ngram)
+
+```
+
+
+
+```{r data wrangling, echo = FALSE}
+
+Df <- read_excel("Expt2_Df.xlsx")
+
+Df$ID <- factor(Df$ID)
+Df$load_type <- factor(Df$load_type)
+Df$mem_type <- factor(Df$mem_type)
+Df$mem_cue <- factor(Df$mem_cue)
+Df$stim <- factor(Df$stim)
+
+
+```
+
+## Results
+
+## Experiment 2: auditory memory load
+
+### Manipulation check
+
+- mems lacking specificty removed
+- word count of true and fab = ?
+
+
+### Data analysis
+
+All analyses were run using RStudio Version 3.5.1. Data, unless otherwise stated, were analysed using Bayesian linear mixed effects models, using the R package BRMS (REF). For all models, a maximal random effects structure was included for participants and for cue words (Bates REF). For each model, an estimate was calculated which provided the posterior mean for each parameter and the 95% credible interval (CrI) which indicates 95% of the most probable parameter values. Statistical support for a given parameter was assumed if the CI did not include zero. Rhat was inspected for all models to confirm convergence (Gelman & Rubin, 1992).
+
+All models were fitted with weakly informative priors and were run with 2,000 iterations on 4 chains, with a warm-up of 1,000 iterations.
+
+
+```{r Expt 2 Retrieval time, echo=FALSE, message=FALSE, warning=FALSE}
+
+#expt2_summary <- Df %>%
+  #group_by(load_type, mem_type) %>%
+  #summarise(mean = mean(mem_RT), sd = sd(mem_RT))
+
+pirateplot(log(mem_RT) ~ load_type * mem_type, data = Df)
+
+
+#model
+expt2_RT_bayes <- brm(log(mem_RT) ~ load_type * mem_type + (load_type * mem_type|ID) + (load_type * mem_type|mem_cue), data = Df)
+
+#check estimates, model and convergence
+expt2_RT_bayes_summ <- summary(expt2_RT_bayes)
+expt2_RT_bayes_plot <- plot(expt2_RT_bayes)
+expt2_RT_bayes_check <- pp_check(expt2_RT_bayes)
+expt2_RT_bayes_margeff <- marginal_effects(expt2_RT_bayes)
+
+# Plot model
+plot_model(expt2_RT_bayes)
+
+#model summary table
+tab_model(expt2_RT_bayes, show.hdi50 = FALSE, show.re.var = FALSE, show.r2 = FALSE, show.icc = FALSE)
+
+
+
+
+# Word Count
+
+ Df$wordcount <- sapply(strsplit(Df$mem_description, " "), length)
+ 
+Expt2_wordcount_summary <- Df %>%
+  group_by(load_type, mem_type) %>%
+  summarise(mean = mean(wordcount), sd = sd(wordcount))
+
+```
+
+
+### Memory Retrieval Time
+
+Retreival time for a participant to bring a memory to mind was investigated as a function of memory type and cognitive load condition. Mean retrieval time and 95% confidence intervals are shown in Figure X, note the data are shown on the log scale to improve data visualisation.
+
+Retreival time was log transformed to manage the skew in the data and entered into a Bayesian linear mixed effects model. Fixed effects were memory type (real, fabricated) and cognitive load (load, no-load). Results are shown in Figure X.
+
+As can be seen in Table X, retreival time was longer in the no load condition as compared to the load condition, regardless of memory type (estimate = `r round(fixef(expt2_RT_bayes)[2, 1], 3) `, 95% CrI = `r round(fixef(expt2_RT_bayes)[2, 3], 3) `, `r round(fixef(expt2_RT_bayes)[2, 4], 3) `. There was no change in retreival time between memory types, regardless of load condition (estimate = `r round(fixef(expt2_RT_bayes)[3, 1], 3) `, 95% CrI = `r round(fixef(expt2_RT_bayes)[3, 3], 3)`, `r round(fixef(expt2_RT_bayes)[3, 4], 3) `, or the interaction of the two predictors (estimate = `r round(fixef(expt2_RT_bayes)[4, 1], 3) `, 95% CrI = `r round(fixef(expt2_RT_bayes)[4, 3], 3)`, `r round(fixef(expt2_RT_bayes)[4, 4], 3) `.   
+
+### Exploratory hypotheses
+
+Since the effect was not what we had hypothesised, we wondered whether rather than performance on secondary task being attenuated during memory generation, if memory generation may have been attenuated to allow the task to be prioritised. We assessed this using word count of memory accounts, and hypothesised that if this was the case, memories generated without load would have lower word counts, indicating less engagement with the task, then memories recalled with load.
+
+
+
+### Stimuli recall: serial order
+
+*need to think about outcome var - truncated count??*
+
+To determine how many digits participants recalled correctly in the original serial order....[how was this done Josh?]. The number of digits correctly recalled in serial order was investigated as a function of memory type. Mean number of digits called and 95% confidence intervals are shown in Figure X.
+
+
+```{r Expt 2 Serial Order, echo=FALSE, message=FALSE, warning=FALSE}
+
+Df2 <- filter(Df, load_type == "load")
+
+#Df2 %>% group_by(mem_type) %>% count(stim_serial_order)
+
+pirateplot(stim_serial_order ~ mem_type, data = Df)
+
+
+#poisson model
+expt2_serial_order <- brm(stim_serial_order ~ mem_type + (mem_type|ID) + (mem_type|mem_cue), data = Df2, family = "poisson")
+
+#check estimates, model and convergence
+expt2_serial_order_summ <- summary(expt2_serial_order )
+expt2_serial_order_plot <- plot(expt2_serial_order )
+expt2_serial_order_check <- pp_check(expt2_serial_order )
+expt2_serial_order_margeff <- marginal_effects(expt2_serial_order )
+
+# Plot model
+plot_model(expt2_serial_order)
+
+#model summary table
+tab_model(expt2_serial_order, show.hdi50 = FALSE, show.re.var = FALSE, show.r2 = FALSE, show.icc = FALSE)
+
+
+#neg binomial model
+expt2_serial_order_nb <- brm(stim_serial_order ~ mem_type + (mem_type|ID) + (mem_type|mem_cue), data = Df2, family = "negbinomial", cores = 8)
+
+#check estimates, model and convergence
+expt2_serial_order_summ <- summary(expt2_serial_order_nb )
+expt2_serial_order_plot <- plot(expt2_serial_order_nb )
+expt2_serial_order_check <- pp_check(expt2_serial_order_nb )
+expt2_serial_order_margeff <- marginal_effects(expt2_serial_order_nb )
+
+# Plot model
+plot_model(expt2_serial_order_nb)
+
+#model summary table
+tab_model(expt2_serial_order_nb, show.hdi50 = FALSE, show.re.var = FALSE, show.r2 = FALSE, show.icc = FALSE)
+
+#model comparisons: poisson vs negbinomial
+serial_order_WAIC <- waic(expt2_serial_order, expt2_serial_order_nb)
+serial_order_LOO <- loo(expt2_serial_order, expt2_serial_order_nb)
+
+```
+
+Two distributions used for analysing count data were implemented: Poisson and negative binomial. This was done since Poisson models do not produce reliable estimates when there is over-dispersion in the data, and evidence of over-disperson can be found when the count mean and variance are similar. In our case, the values were similar, the count mean was `r round(mean(Df2$stim_serial_order), 3)` while the variance was `r round(var(Df2$stim_serial_order), 3)`. The two models were run, investigating number of digits recalled in serial order as a function of memory type. To determine which model fit the data the best, model comparisons were run using Watanabe–Akaike information criterion (WAIC) and leave-one-out information criterion (LOOIC). Since smaller values for both WAIC and LOOIC indicate a better model fit, it can be concluded from both inforamtion criteria that the Poisson model fits the data better: Poisson WAIC = 987, LOOIC = 988, negative binomial WAIC = 991, LOOIC = 991.
+
+Result from the Poisson regression show that there was no difference in digit serial order recall as a function of memory type (estimate = `r round(fixef(expt2_serial_order)[2, 1], 3)`, 95% CrI = `r round(fixef(expt2_serial_order)[2, 3], 3)`, `r round(fixef(expt2_serial_order)[2, 4], 3)`.   
