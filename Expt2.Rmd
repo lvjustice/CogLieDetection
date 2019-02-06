@@ -106,17 +106,25 @@ To determine how many digits participants recalled correctly in the original ser
 ```{r Expt 2 Serial Order, echo=FALSE, message=FALSE, warning=FALSE}
 
 Df2 <- filter(Df, load_type == "load")
-
-#Df2 %>% group_by(mem_type) %>% count(stim_serial_order)
-
-ggplot(data = Df2) + geom_bar(aes(x = stim_serial_order, colour = mem_type))
-
-
-
 Df2$stim_serial_order <- as.ordered(Df2$stim_serial_order)
 
+Df2 %>% 
+  group_by(mem_type) %>% 
+  count(stim_serial_order)
+
+ggplot(data = Df2, aes(colour = mem_type)) + 
+  geom_bar(aes(x = stim_serial_order, y = ..prop.., group = 1, fill = mem_type)) +
+  facet_wrap(~ mem_type) +
+  theme_classic()
+
+
 #ordinal model
-expt2_serial_order <- brm(stim_serial_order ~ mem_type + (mem_type|ID) + (mem_type|mem_cue), data = Df2, family = cumulative("logit"))
+expt2_serial_order <- brm(stim_serial_order ~ mem_type + (mem_type|ID) + (mem_type|mem_cue), 
+                          data = Df2, 
+                          prior = set_prior('normal(0, 100)'),
+                          cores = 2,
+                          chains = 4,
+                          family = cumulative("logit"))
 
 #check estimates, model and convergence
 expt2_serial_order_summ <- summary(expt2_serial_order )
